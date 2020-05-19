@@ -1,0 +1,203 @@
+import numpy as np
+from sklearn.metrics import accuracy_score
+from matplotlib import pyplot as plt
+%matplotlib inline
+import tensorflow as tf
+print("We're using TF", tf.__version__)
+import keras
+
+
+
+def load_dataset(flatten=False):
+    (X_train, y_train), (X_test, y_test) = keras.datasets.mnist.load_data()
+
+    # normalize x
+    X_train = X_train.astype(float) / 255.
+    X_test = X_test.astype(float) / 255.
+
+    # we reserve the last 10000 training examples for validation
+    X_train, X_val = X_train[:-10000], X_train[-10000:]
+    y_train, y_val = y_train[:-10000], y_train[-10000:]
+
+    if flatten:
+        X_train = X_train.reshape([X_train.shape[0], -1])
+        X_val = X_val.reshape([X_val.shape[0], -1])
+        X_test = X_test.reshape([X_test.shape[0], -1])
+
+    return X_train, y_train, X_val, y_val, X_test, y_test
+
+X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
+print("X_train [shape %s] sample patch:\n" % (str(X_train.shape)), X_train[1, 15:20, 5:10])
+print("A closeup of a sample patch:")
+plt.imshow(X_train[1, 15:20, 5:10], cmap="Greys")
+plt.show()
+print("And the whole sample:")
+plt.imshow(X_train[1], cmap="Greys")
+plt.show()
+print("y_train [shape %s] 10 samples:\n" % (str(y_train.shape)), y_train[:10])
+
+X_train_flat = X_train.reshape((X_train.shape[0], -1))
+print(X_train_flat.shape)
+X_val_flat = X_val.reshape((X_val.shape[0], -1))
+print(X_val_flat.shape)
+
+y_train_oh = keras.utils.to_categorical(y_train, 10)
+y_val_oh = keras.utils.to_categorical(y_val, 10)
+
+
+
+W = tf.get_variable(shape = (784,10),name = 'weights')
+b = tf.get_variable(shape = (10), name ='bias')
+input_X = tf.placeholder('float32',shape = (None,784))
+input_y = tf.placeholder('float32',shape = (None,10))
+
+
+
+logits = tf.layers.dense(input_X,784,activation = tf.nn.sigmoid)
+logits12 = tf.layers.dense(logits,256,activation = tf.nn.sigmoid)
+logits13 = tf.layers.dense(logits12,256,activation = tf.nn.sigmoid)
+logits2 = tf.layers.dense(logits13,10)
+
+
+probas = tf.nn.softmax(logits2)
+classes = tf.argmax(probas,axis = 1)
+
+
+loss =tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels = input_y,logits = logits2))
+step = tf.train.AdamOptimizer(0.003).minimize(loss)
+
+
+
+s.run(tf.global_variables_initializer())
+BATCH_SIZE = 512
+EPOCHS = 20
+simpleTrainingCurves = matplotlib_utils.SimpleTrainingCurves("cross-entropy", "accuracy")
+for epoch in range(EPOCHS):
+batch_losses = []
+for batch_start in range(0, X_train_flat.shape[0], BATCH_SIZE):
+  _, batch_loss = s.run([step, loss], {
+    input_X: X_train_flat[batch_start: batch_start + BATCH_SIZE],
+    input_y: y_train_oh[batch_start: batch_start + BATCH_SIZE]
+  })
+batch_losses.append(batch_loss)
+train_loss = np.mean(batch_losses)
+val_loss = s.run(loss, {
+  input_X: X_val_flat,
+  input_y: y_val_oh
+})
+train_accuracy = accuracy_score(y_train, s.run(classes, {
+  input_X: X_train_flat
+}))
+valid_accuracy = accuracy_score(y_val, s.run(classes, {
+  input_X: X_val_flat
+}))
+simpleTrainingCurves.add(train_loss, val_loss, train_accuracy, valid_accuracy)
+
+
+
+from matplotlib
+import pyplot as plt
+from IPython.display
+import clear_output, display_html, HTML
+import contextlib
+import time
+import io
+import urllib
+import base64
+def clear_and_display_figure(fig, sleep = 0.01):
+   img_data = io.BytesIO()
+fig.savefig(img_data, format = 'jpeg')
+img_data.seek(0)
+uri = 'data:image/jpeg;base64,'\ +
+   urllib.request.quote(base64.b64encode(img_data.getbuffer()))
+img_data.close()
+clear_output(wait = True)
+display_html(HTML('<img src="' + uri + '">'))
+time.sleep(sleep)
+class SimpleMovieWriter(object):
+   """
+   Usage example:anim = animation.FuncAnimation(...)
+   anim.save(None, writer = SimpleMovieWriter(sleep = 0.01))
+   """
+   def __init__(self, sleep = 0.1):
+      self.sleep = sleep
+   def setup(self, fig):
+      self.fig = fig
+   def grab_frame(self, ** kwargs):
+      clear_and_display_figure(self.fig, self.sleep)
+      @contextlib.contextmanager
+   def saving(
+      self,
+      fig,
+      * args, **
+      kwargs
+   ):
+       self.setup(fig)
+       try:
+           yield self
+       finally:
+          pass
+class SimpleTrainingCurves(object):
+   def __init__(self, loss_name, metric_name):
+   (self.fig, (self.ax1, self.ax2)) = plt.subplots(nrows = 1,
+      ncols = 2, figsize = (12, 4))
+   self.ax1.set_title(loss_name)
+   self.ax2.set_title(metric_name)
+   (self.train_loss_curve, ) = self.ax1.plot([], [], 'r',
+      label = 'train', lw = 2)
+   (self.valid_loss_curve, ) = self.ax1.plot([], [], 'g',
+      label = 'valid', lw = 2)
+   (self.train_metric_curve, ) = self.ax2.plot([], [], 'r',
+      label = 'train', lw = 2)
+   (self.valid_metric_curve, ) = self.ax2.plot([], [], 'g',
+      label = 'valid', lw = 2)
+   self.iter = 0
+   self.y_limits_1 = [None, None]
+   self.y_limits_2 = [None, None]
+   plt.close(self.fig)
+   def _update_y_limits(self, limits, * values):
+      limits[0] = min(list(values) +
+         (([limits[0]]
+            if limits[0]
+            else [])))
+   limits[1] = max(list(values) +
+      (([limits[1]]
+         if limits[1]
+         else [])))
+   def _update_curve(
+         self,
+         curve,
+         value,
+         label,
+      ):
+      (x, y) = curve.get_data()
+   curve.set_data(list(x) + [self.iter], list(y) + [value])
+   curve.set_label('{}: {}'.format(label, value))
+   def _set_y_limits(self, ax, limits):
+      spread = limits[1] - limits[0]
+      ax.set_ylim(limits[0] - 0.05 * spread, limits[1] + 0.05 *
+      spread)
+   def add(
+         self,
+         train_loss,
+         valid_loss,
+         train_metric,
+         valid_metric,
+      ):
+   self._update_curve(self.train_loss_curve, train_loss, 'train')
+   self._update_curve(self.valid_loss_curve, valid_loss, 'valid')
+   self._update_curve(self.train_metric_curve, train_metric,
+      'train')
+   self._update_curve(self.valid_metric_curve, valid_metric,
+      'valid')
+   self.ax1.set_xlim(0, self.iter)
+   self.ax2.set_xlim(0, self.iter)
+   self._update_y_limits(self.y_limits_1, train_loss, valid_loss)
+   self._update_y_limits(self.y_limits_2, train_metric,
+      valid_metric)
+   self._set_y_limits(self.ax1, self.y_limits_1)
+   self._set_y_limits(self.ax2, self.y_limits_2)
+   clear_and_display_figure(self.fig)
+   self.ax1.legend()
+   self.ax2.legend()
+   self.iter += 1
